@@ -2,6 +2,7 @@
 
 import { ChangeEvent, useEffect } from "react";
 import { MiniTool, MiniToolPayload } from "@/lib/api";
+import DescriptionBlocksEditor from "./DescriptionBlocksEditor";
 
 type ToolFormModalProps = {
   bindField: <K extends keyof MiniToolPayload>(
@@ -157,15 +158,19 @@ export default function ToolFormModal({
               />
             </label>
 
-            <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700 md:col-span-2">
-              Description
-              <textarea
-                placeholder="Explain what this mini tool does and how to use it."
-                className="h-32 rounded border border-zinc-300 px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                required
-                {...bindField("description")}
-              />
-            </label>
+            <DescriptionBlocksEditor
+              description={
+                Array.isArray(formData.description)
+                  ? formData.description
+                  : []
+              }
+              onChange={(newDescription) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  description: newDescription,
+                }))
+              }
+            />
 
             <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
               Thumbnail URL

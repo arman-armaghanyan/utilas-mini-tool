@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApiError, getTool } from "@/lib/api";
+import DescriptionPresentation from "@/Components/DescriptionPresentation";
 
 type ToolPageProps = {
   params: { id: string };
@@ -63,10 +64,17 @@ export default async function ToolDetailPage({
       </header>
 
       <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-zinc-900">Description</h2>
-        <p className="mt-3 text-sm leading-6 text-zinc-600">
-          {tool.description}
-        </p>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-4">Description</h2>
+        {Array.isArray(tool.description) && tool.description.length > 0 ? (
+          <DescriptionPresentation
+            description={tool.description}
+            toolTitle={tool.title}
+          />
+        ) : (
+          <p className="text-sm leading-6 text-zinc-600">
+            {typeof tool.description === "string" ? tool.description : "No description available."}
+          </p>
+        )}
       </section>
 
       <section className="flex flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">

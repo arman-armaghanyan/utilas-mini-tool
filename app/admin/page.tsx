@@ -14,12 +14,14 @@ import {
 } from "@/lib/api";
 import ToolFormModal from "@/Components/ToolFormModal";
 import MiniToolListItem from "@/Components/MiniToolListItem";
+import SearchInput from "@/Components/SearchInput";
+import {useToolSearch} from "@/hooks/useToolSearch";
 
 const defaultForm: MiniToolPayload = {
   id: "",
   title: "",
   summary: "",
-  description: "",
+  description: [],
   thumbnail: "",
   iframeSlug: "",
   iframeHtml: "",
@@ -36,6 +38,7 @@ export default function AdminPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [reactAppFile, setReactAppFile] = useState<File | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { searchQuery, isSearching, handleSearch } = useToolSearch();
 
   useEffect(() => {
     refreshTools();
@@ -61,6 +64,17 @@ export default function AdminPage() {
     }
   }
 
+  async function onSearch(query: string) {
+    setError(null);
+    try {
+      await handleSearch(query, setTools, refreshTools);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to search tools.";
+      setError(message);
+    }
+  }
+
   function resetForm() {
     setFormData(defaultForm);
     setEditing(null);
@@ -81,7 +95,7 @@ export default function AdminPage() {
       id: tool.id,
       title: tool.title,
       summary: tool.summary,
-      description: tool.description,
+      description: Array.isArray(tool.description) ? tool.description : [],
       thumbnail: tool.thumbnail,
       iframeSlug: tool.iframeSlug,
       iframeHtml: tool.iframeHtml || "",
@@ -122,6 +136,23 @@ export default function AdminPage() {
       setError("Tool ID cannot be changed after creation.");
       setSaving(false);
       return;
+    }
+
+    // Validate description blocks
+    if (!Array.isArray(formData.description) || formData.description.length === 0) {
+      setError("Please add at least one description block.");
+      setSaving(false);
+      return;
+    }
+
+    // Validate each description block
+    for (let i = 0; i < formData.description.length; i++) {
+      const block = formData.description[i];
+      if (!block.image || !block.text || !block.orientation) {
+        setError(`Description block ${i + 1} is incomplete. Please fill in all fields.`);
+        setSaving(false);
+        return;
+      }
     }
 
     try {
@@ -235,18 +266,28 @@ export default function AdminPage() {
       <section className="flex flex-col gap-4">
         <header className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-zinc-900">Existing tools</h2>
-          <span className="text-sm text-zinc-500">
-            {tools.length} item{tools.length === 1 ? "" : "s"}
-          </span>
+          <div className="flex items-center gap-4">
+            <SearchInput
+              value={searchQuery}
+              onChange={onSearch}
+              inline={true}
+            />
+            <span className="text-sm text-zinc-500">
+              {tools.length} item{tools.length === 1 ? "" : "s"}
+              {searchQuery && ` found`}
+            </span>
+          </div>
         </header>
 
-        {loading ? (
+        {loading || isSearching ? (
           <div className="rounded-md border border-zinc-200 bg-white p-6 text-sm text-zinc-500 shadow-sm">
-            Loading tools...
+            {isSearching ? "Searching..." : "Loading tools..."}
           </div>
         ) : tools.length === 0 ? (
           <div className="rounded-md border border-dashed border-zinc-300 bg-white p-10 text-center text-sm text-zinc-500 shadow-sm">
-            No tools in the catalog yet.
+            {searchQuery
+              ? `No tools found matching "${searchQuery}".`
+              : "No tools in the catalog yet."}
           </div>
         ) : (
           <div className="grid gap-4">

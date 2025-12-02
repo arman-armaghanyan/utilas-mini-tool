@@ -1,5 +1,15 @@
 const mongoose = require("mongoose");
 
+const DescriptionBlockSchema = new mongoose.Schema({
+    image: { type: String, required: true },
+    text: { type: String, required: true },
+    orientation: {
+        type: String,
+        enum: ["left", "right"],
+        required: true,
+    },
+});
+
 const miniToolSchema = new mongoose.Schema(
   {
     id: {
@@ -19,7 +29,7 @@ const miniToolSchema = new mongoose.Schema(
       trim: true,
     },
     description: {
-      type: String,
+      type: [DescriptionBlockSchema],
       required: true,
       trim: true,
     },
@@ -48,7 +58,6 @@ const miniToolSchema = new mongoose.Schema(
     },
     appType: {
       type: String,
-      enum: ['html', 'react'],
       default: 'html',
     },
   },

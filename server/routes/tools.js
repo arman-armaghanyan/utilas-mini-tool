@@ -1,7 +1,6 @@
 const express = require("express");
 const multer = require("multer");
 const fs = require("fs").promises;
-const path = require("path");
 const MiniToolDB = require("../models/MiniToolDB");
 const {getZipFileEntryByBuffer, storeZipFileOnDiskAsync, deletZilpFileAsync} = require("../Services/ReactZipFileProcessingService");
 
@@ -55,6 +54,36 @@ function withIframeUrl(tool) {
   };
 }
 
+router.get("/search-tools", async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.trim() === "") {
+      return res.status(400).json({ message: "Query parameter 'q' is required." });
+    }
+
+    const searchQuery = q.trim();
+    
+    // Create a case-insensitive regex pattern for searching
+    const searchRegex = new RegExp(searchQuery, "i");
+
+    // Search across title, summary, and description fields
+    const tools = await MiniToolDB.find({
+      $or: [
+        { title: searchRegex },
+      ],
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const results = tools.map(withIframeUrl);
+    res.json(results);
+  } catch (error) {
+    console.error("Error searching tools:", error);
+    res.status(500).json({ message: "Internal server error while searching tools." });
+  }
+});
+
 router.get("/", async (_req, res) => {
   const tools = (await MiniToolDB.find()
       .sort({ createdAt: -1 })
@@ -74,10 +103,29 @@ router.post("/", async (req, res, next) => {
       !title ||
       !summary ||
       !description ||
+      !Array.isArray(description) ||
+      description.length === 0 ||
       !thumbnail ||
       !iframeSlug
     ) {
-      return res.status(400).json({ message: "All fields are required." });
+      return res.status(400).json({ message: "All fields are required, and description must be a non-empty array." });
+    }
+
+    // Validate each description block
+    for (let i = 0; i < description.length; i++) {
+      const block = description[i];
+      if (!block || typeof block !== 'object') {
+        return res.status(400).json({ message: `Description block ${i + 1} must be an object.` });
+      }
+      if (!block.image || typeof block.image !== 'string') {
+        return res.status(400).json({ message: `Description block ${i + 1} must have a valid image URL.` });
+      }
+      if (!block.text || typeof block.text !== 'string') {
+        return res.status(400).json({ message: `Description block ${i + 1} must have text.` });
+      }
+      if (!block.orientation || !['left', 'right'].includes(block.orientation)) {
+        return res.status(400).json({ message: `Description block ${i + 1} must have orientation 'left' or 'right'.` });
+      }
     }
 
     const createData = {
@@ -129,6 +177,30 @@ router.put("/:id", async (req, res, next) => {
     delete updates._id;
     delete updates.id;
     delete updates.reactAppZip; // Prevent direct zip updates via PUT
+
+    // Validate description blocks if provided
+    if (updates.description !== undefined) {
+      if (!Array.isArray(updates.description) || updates.description.length === 0) {
+        return res.status(400).json({ message: "Description must be a non-empty array." });
+      }
+      
+      // Validate each description block
+      for (let i = 0; i < updates.description.length; i++) {
+        const block = updates.description[i];
+        if (!block || typeof block !== 'object') {
+          return res.status(400).json({ message: `Description block ${i + 1} must be an object.` });
+        }
+        if (!block.image || typeof block.image !== 'string') {
+          return res.status(400).json({ message: `Description block ${i + 1} must have a valid image URL.` });
+        }
+        if (!block.text || typeof block.text !== 'string') {
+          return res.status(400).json({ message: `Description block ${i + 1} must have text.` });
+        }
+        if (!block.orientation || !['left', 'right'].includes(block.orientation)) {
+          return res.status(400).json({ message: `Description block ${i + 1} must have orientation 'left' or 'right'.` });
+        }
+      }
+    }
 
     const tool = await MiniToolDB.findOne({ id: req.params.id });
 

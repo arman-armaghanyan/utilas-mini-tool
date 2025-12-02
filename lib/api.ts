@@ -7,12 +7,18 @@ export class ApiError extends Error {
   }
 }
 
+export type DescriptionBlock = {
+  image: string;
+  text: string;
+  orientation: "left" | "right";
+};
+
 export type MiniTool = {
   _id?: string;
   id: string;
   title: string;
   summary: string;
-  description: string;
+  description: DescriptionBlock[];
   thumbnail: string;
   iframeSlug: string;
   iframeHtml?: string;
@@ -80,6 +86,10 @@ async function extractError(response: Response): Promise<string> {
 
 export function getTools(): Promise<MiniTool[]> {
   return request<MiniTool[]>("/api/tools");
+}
+
+export function searchTools(query: string): Promise<MiniTool[]> {
+  return request<MiniTool[]>(`/api/tools/search-tools?q=${encodeURIComponent(query)}`);
 }
 
 export function getTool(id: string): Promise<MiniTool> {
