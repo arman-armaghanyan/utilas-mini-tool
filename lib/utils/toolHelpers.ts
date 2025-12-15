@@ -1,9 +1,17 @@
 export function getBaseUrl(): string {
+  // Check for explicit env vars first
   const baseUrl = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (!baseUrl) {
-    throw new Error("API_BASE_URL or NEXT_PUBLIC_API_BASE_URL environment variable is required");
+  if (baseUrl) {
+    return baseUrl.replace(/\/$/, "");
   }
-  return baseUrl.replace(/\/$/, "");
+  
+  // Use Vercel's auto-generated URL
+  const vercelUrl = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_VERCEL_URL;
+  if (vercelUrl) {
+    return `https://${vercelUrl}`;
+  }
+  
+  return "";
 }
 
 export function withIframeUrl(tool: any) {

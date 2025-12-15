@@ -37,8 +37,20 @@ export type MiniToolPayload = Omit<
 
 function getApiBaseUrl(): string {
   const isServer = typeof window === "undefined";
+  
+  // Check for explicit env vars first
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || (isServer ? process.env.API_BASE_URL : "");
-  return baseUrl ? baseUrl.replace(/\/$/, "") : "";
+  if (baseUrl) {
+    return baseUrl.replace(/\/$/, "");
+  }
+  
+  // Use Vercel's auto-generated URL
+  const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL || (isServer ? process.env.VERCEL_URL : "");
+  if (vercelUrl) {
+    return `https://${vercelUrl}`;
+  }
+  
+  return "";
 }
 
 async function request<T>(
