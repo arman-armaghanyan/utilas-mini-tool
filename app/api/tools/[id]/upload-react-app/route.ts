@@ -3,41 +3,7 @@ import { connectDB } from '@/lib/mongodb';
 import MiniToolDB from '@/lib/models/MiniToolDB';
 import { getZipFileEntryByBuffer } from '@/lib/services/reactZipProcessing';
 import { storeZipInBlob, deleteZipFromBlob } from '@/lib/services/blobStorage';
-
-// Helper function to get the base URL for full paths
-function getBaseUrl() {
-  const baseUrl = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (baseUrl) {
-    return baseUrl.replace(/\/$/, ""); // Remove trailing slash
-  }
-  // Fallback to localhost with port
-  const port = process.env.PORT || 4010;
-  return `http://127.0.0.1:${port}`;
-}
-
-// Helper function to add iframeUrl to tool
-function withIframeUrl(tool: any) {
-  if (!tool) {
-    return tool;
-  }
-
-  const plain =
-    typeof tool.toObject === "function" ? tool.toObject({ virtuals: true }) : { ...tool };
-
-  // Remove internal blob URL from response (internal use only)
-  if (plain.reactAppBlobUrl) {
-    delete plain.reactAppBlobUrl;
-  }
-
-  const iframeUrl = plain.appType === 'react'
-    ? (plain.reactAppUrl || `/mini-tools-react/${plain.iframeSlug}/`)
-    : `/mini-tools/${plain.iframeSlug}`;
-
-  return {
-    ...plain,
-    iframeUrl, // Relative path for same-origin use
-  };
-}
+import { getBaseUrl, withIframeUrl } from '@/lib/utils/toolHelpers';
 
 function isHasIndexHtmlExist(entries: any[]) {
   return entries.some(entry => {
@@ -67,7 +33,6 @@ export async function POST(
       );
     }
 
-    // Check file type
     if (file.type !== "application/zip" && file.type !== "application/x-zip-compressed") {
       return NextResponse.json(
         { message: "Only .zip files are allowed" },
@@ -103,7 +68,7 @@ export async function POST(
 
     console.log(`[Upload] index.html found, proceeding to upload to Vercel Blob`);
     
-    // Delete old blob if it exists (do this before uploading new one)
+    // Delete old blob if it exists
     if (tool.reactAppBlobUrl) {
       await deleteZipFromBlob(tool.reactAppBlobUrl);
     }
@@ -114,10 +79,11 @@ export async function POST(
     const baseUrl = getBaseUrl();
     const reactAppPath = `/mini-tools-react/${tool.iframeSlug}/`;
 
-    tool.reactAppBlobUrl = blobUrl; // Store Vercel Blob URL
-    tool.reactAppUrl = `${baseUrl}${reactAppPath}`; // Store full URL for iframe
+    tool.reactAppBlobUrl = blobUrl;
+    tool.reactAppUrl = `${baseUrl}${reactAppPath}`;
     tool.appType = 'react';
     await tool.save();
+
     return NextResponse.json(withIframeUrl(tool));
   } catch (error: any) {
     if (error.message === "Only .zip files are allowed") {
@@ -133,4 +99,3 @@ export async function POST(
     );
   }
 }
-

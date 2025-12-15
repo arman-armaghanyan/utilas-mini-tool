@@ -1,43 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import MiniToolDB from '@/lib/models/MiniToolDB';
+import { withIframeUrl } from '@/lib/utils/toolHelpers';
 
-// Helper function to get the base URL for full paths
-function getBaseUrl() {
-  const baseUrl = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (baseUrl) {
-    return baseUrl.replace(/\/$/, ""); // Remove trailing slash
-  }
-  // Fallback to localhost with port
-  const port = process.env.PORT || 4010;
-  return `http://127.0.0.1:${port}`;
-}
-
-// Helper function to add iframeUrl to tool
-function withIframeUrl(tool: any) {
-  if (!tool) {
-    return tool;
-  }
-
-  const plain =
-    typeof tool.toObject === "function" ? tool.toObject({ virtuals: true }) : { ...tool };
-
-  // Remove internal blob URL from response (internal use only)
-  if (plain.reactAppBlobUrl) {
-    delete plain.reactAppBlobUrl;
-  }
-
-  const iframeUrl = plain.appType === 'react'
-    ? (plain.reactAppUrl || `/mini-tools-react/${plain.iframeSlug}/`)
-    : `/mini-tools/${plain.iframeSlug}`;
-
-  return {
-    ...plain,
-    iframeUrl, // Relative path for same-origin use
-  };
-}
-
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     await connectDB();
 
@@ -45,7 +11,7 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .lean())
       .map(withIframeUrl);
-    // withIframeUrl will compute iframeUrl for each tool
+
     return NextResponse.json(tools);
   } catch (error) {
     console.error("Error fetching tools:", error);
@@ -79,7 +45,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate each description block
     for (let i = 0; i < description.length; i++) {
       const block = description[i];
       if (!block || typeof block !== 'object') {
@@ -135,4 +100,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

@@ -1,30 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import MiniToolDB from '@/lib/models/MiniToolDB';
-
-// Helper function to add iframeUrl to tool
-function withIframeUrl(tool: any) {
-  if (!tool) {
-    return tool;
-  }
-
-  const plain =
-    typeof tool.toObject === "function" ? tool.toObject({ virtuals: true }) : { ...tool };
-
-  // Remove internal blob URL from response (internal use only)
-  if (plain.reactAppBlobUrl) {
-    delete plain.reactAppBlobUrl;
-  }
-
-  const iframeUrl = plain.appType === 'react'
-    ? (plain.reactAppUrl || `/mini-tools-react/${plain.iframeSlug}/`)
-    : `/mini-tools/${plain.iframeSlug}`;
-
-  return {
-    ...plain,
-    iframeUrl, // Relative path for same-origin use
-  };
-}
+import { withIframeUrl } from '@/lib/utils/toolHelpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,11 +18,8 @@ export async function GET(request: NextRequest) {
     }
 
     const searchQuery = q.trim();
-
-    // Create a case-insensitive regex pattern for searching
     const searchRegex = new RegExp(searchQuery, "i");
 
-    // Search across title, summary, and description fields
     const tools = await MiniToolDB.find({
       $or: [
         { title: searchRegex },
@@ -64,4 +38,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

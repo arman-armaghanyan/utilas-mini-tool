@@ -35,20 +35,17 @@ export type MiniToolPayload = Omit<
   "_id" | "createdAt" | "updatedAt" | "iframeUrl" | "reactAppUrl"
 >;
 
-const isServer = typeof window === "undefined";
-const resolvedBase =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (isServer
-    ? process.env.API_BASE_URL ||
-      `http://127.0.0.1:${process.env.PORT || process.env.NEXT_PUBLIC_PORT || 4003}`
-    : "");
-
-const API_BASE_URL = resolvedBase.replace(/\/$/, "");
+function getApiBaseUrl(): string {
+  const isServer = typeof window === "undefined";
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || (isServer ? process.env.API_BASE_URL : "");
+  return baseUrl ? baseUrl.replace(/\/$/, "") : "";
+}
 
 async function request<T>(
   path: string,
   init: RequestInit = {}
 ): Promise<T> {
+  const API_BASE_URL = getApiBaseUrl();
   const url = API_BASE_URL ? `${API_BASE_URL}${path}` : path;
 
   const response = await fetch(url, {
@@ -59,7 +56,7 @@ async function request<T>(
     },
     cache: "no-store",
   });
-  console.log(response);
+
   if (!response.ok) {
     const message = await extractError(response);
     throw new ApiError(message, response.status);
@@ -117,22 +114,14 @@ export function deleteTool(id: string): Promise<void> {
   return request<void>(`/api/tools/${id}`, { method: "DELETE" });
 }
 
- export async function uploadReactApp(
+export async function uploadReactApp(
   id: string,
   file: File
 ): Promise<MiniTool> {
   const formData = new FormData();
   formData.append("reactApp", file);
 
-  const isServer = typeof window === "undefined";
-  const resolvedBase =
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    (isServer
-      ? process.env.API_BASE_URL ||
-        `http://127.0.0.1:${process.env.PORT || process.env.NEXT_PUBLIC_PORT || 4003}`
-      : "");
-
-  const API_BASE_URL = resolvedBase.replace(/\/$/, "");
+  const API_BASE_URL = getApiBaseUrl();
   const url = API_BASE_URL ? `${API_BASE_URL}/api/tools/${id}/upload-react-app` : `/api/tools/${id}/upload-react-app`;
 
   return fetch(url, {
@@ -147,4 +136,3 @@ export function deleteTool(id: string): Promise<void> {
     return response.json();
   });
 }
-

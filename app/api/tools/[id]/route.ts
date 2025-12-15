@@ -2,41 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import MiniToolDB from '@/lib/models/MiniToolDB';
 import { deleteZipFromBlob } from '@/lib/services/blobStorage';
-
-// Helper function to get the base URL for full paths
-function getBaseUrl() {
-  const baseUrl = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (baseUrl) {
-    return baseUrl.replace(/\/$/, ""); // Remove trailing slash
-  }
-  // Fallback to localhost with port
-  const port = process.env.PORT || 4010;
-  return `http://127.0.0.1:${port}`;
-}
-
-// Helper function to add iframeUrl to tool
-function withIframeUrl(tool: any) {
-  if (!tool) {
-    return tool;
-  }
-
-  const plain =
-    typeof tool.toObject === "function" ? tool.toObject({ virtuals: true }) : { ...tool };
-
-  // Remove internal blob URL from response (internal use only)
-  if (plain.reactAppBlobUrl) {
-    delete plain.reactAppBlobUrl;
-  }
-
-  const iframeUrl = plain.appType === 'react'
-    ? (plain.reactAppUrl || `/mini-tools-react/${plain.iframeSlug}/`)
-    : `/mini-tools/${plain.iframeSlug}`;
-
-  return {
-    ...plain,
-    iframeUrl, // Relative path for same-origin use
-  };
-}
+import { getBaseUrl, withIframeUrl } from '@/lib/utils/toolHelpers';
 
 export async function GET(
   request: NextRequest,
@@ -86,7 +52,7 @@ export async function PUT(
     const updates = await request.json();
     delete updates._id;
     delete updates.id;
-    delete updates.reactAppZip; // Prevent direct zip updates via PUT
+    delete updates.reactAppZip;
 
     // Validate description blocks if provided
     if (updates.description !== undefined) {
@@ -97,7 +63,6 @@ export async function PUT(
         );
       }
 
-      // Validate each description block
       for (let i = 0; i < updates.description.length; i++) {
         const block = updates.description[i];
         if (!block || typeof block !== 'object') {
@@ -191,4 +156,3 @@ export async function DELETE(
     );
   }
 }
-
