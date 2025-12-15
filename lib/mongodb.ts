@@ -1,8 +1,10 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-let cachedConnection = null;
+let cachedConnection: typeof mongoose | null = null;
 
-async function connectDB(uri) {
+export async function connectDB(): Promise<typeof mongoose> {
+  const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/mini-tools";
+  
   if (!uri) {
     throw new Error("MONGODB_URI is not defined");
   }
@@ -19,8 +21,4 @@ async function connectDB(uri) {
 
   return cachedConnection;
 }
-
-module.exports = {
-  connectDB,
-};
 

@@ -1,13 +1,13 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const DescriptionBlockSchema = new mongoose.Schema({
-    image: { type: String, required: true },
-    text: { type: String, required: true },
-    orientation: {
-        type: String,
-        enum: ["left", "right"],
-        required: true,
-    },
+  image: { type: String, required: true },
+  text: { type: String, required: true },
+  orientation: {
+    type: String,
+    enum: ["left", "right"],
+    required: true,
+  },
 });
 
 const miniToolSchema = new mongoose.Schema(
@@ -67,15 +67,14 @@ const miniToolSchema = new mongoose.Schema(
   }
 );
 
-miniToolSchema.index({ id: 1 });
-miniToolSchema.index({ iframeSlug: 1 });
-
+// Note: id and iframeSlug already have unique: true which creates indexes automatically
+// No need for explicit index() calls
 
 // Ensure virtuals are included in JSON output
 miniToolSchema.set('toJSON', { virtuals: true });
 miniToolSchema.set('toObject', { virtuals: true });
 
-const MiniToolDB = mongoose.model("MiniTool", miniToolSchema);
+const MiniToolDB = mongoose.models.MiniTool || mongoose.model("MiniTool", miniToolSchema);
 
-module.exports = MiniToolDB;
+export default MiniToolDB;
 
