@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import MiniToolDB from '@/lib/models/MiniToolDB';
-import { promises as fs } from 'fs';
+import { deleteZipFromBlob } from '@/lib/services/blobStorage';
 
 // Helper function to get the base URL for full paths
 function getBaseUrl() {
@@ -23,9 +23,9 @@ function withIframeUrl(tool: any) {
   const plain =
     typeof tool.toObject === "function" ? tool.toObject({ virtuals: true }) : { ...tool };
 
-  // Remove file path from response (internal use only)
-  if (plain.reactAppZipPath) {
-    delete plain.reactAppZipPath;
+  // Remove internal blob URL from response (internal use only)
+  if (plain.reactAppBlobUrl) {
+    delete plain.reactAppBlobUrl;
   }
 
   const iframeUrl = plain.appType === 'react'
@@ -175,14 +175,9 @@ export async function DELETE(
       );
     }
 
-    // Delete associated zip file if it exists
-    if (tool.reactAppZipPath) {
-      try {
-        await fs.unlink(tool.reactAppZipPath);
-      } catch (err) {
-        // Ignore if file doesn't exist
-        console.warn(`Could not delete zip file: ${tool.reactAppZipPath}`);
-      }
+    // Delete associated blob from Vercel Blob if it exists
+    if (tool.reactAppBlobUrl) {
+      await deleteZipFromBlob(tool.reactAppBlobUrl);
     }
 
     await MiniToolDB.findOneAndDelete({ id });

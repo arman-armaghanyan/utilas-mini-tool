@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import MiniToolDB from '@/lib/models/MiniToolDB';
-import { getZipFileEntryByPath } from '@/lib/services/reactZipProcessing';
+import { getZipFileEntryByUrl } from '@/lib/services/reactZipProcessing';
 import { getMiniToolMimeType, getMiniToolContent } from '@/lib/services/miniToolService';
 
 export async function GET(
@@ -26,10 +26,10 @@ export async function GET(
       );
     }
 
-    if (!tool.reactAppZipPath) {
-      console.log(`[React App] No zip file path for slug: ${slug}`);
+    if (!tool.reactAppBlobUrl) {
+      console.log(`[React App] No blob URL for slug: ${slug}`);
       return NextResponse.json(
-        { message: "React app zip not found" },
+        { message: "React app not found" },
         { status: 404 }
       );
     }
@@ -44,7 +44,8 @@ export async function GET(
     }
     // If empty path, default to index.html
     const normalizedPath = requestedPath || "index.html";
-    const fileEntry = await getZipFileEntryByPath(tool.reactAppZipPath, normalizedPath);
+    
+    const fileEntry = await getZipFileEntryByUrl(tool.reactAppBlobUrl, normalizedPath);
 
     // Type guard: check if fileEntry is a valid ZipEntry (has getData method)
     if (!fileEntry || Object.keys(fileEntry).length === 0 || !('getData' in fileEntry)) {

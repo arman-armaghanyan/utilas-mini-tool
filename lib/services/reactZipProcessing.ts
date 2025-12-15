@@ -1,6 +1,5 @@
-import { promises as fs } from "fs";
 import AdmZip from "adm-zip";
-import path from "path";
+import { fetchZipFromBlob } from "./blobStorage";
 
 interface ZipEntry {
   entryName: string;
@@ -16,17 +15,6 @@ interface NormalizedEntry {
 export function getZipFileEntryByBuffer(buffer: Buffer): ZipEntry[] {
   const zip = new AdmZip(buffer);
   return zip.getEntries();
-}
-
-async function readZipFile(filePath: string): Promise<Buffer | undefined> {
-  try {
-    const zipBuffer = await fs.readFile(filePath);
-    return zipBuffer;
-  } catch (error) {
-    console.error(`[React App] Error reading zip file from disk:`, error);
-    console.error(`[React App] File path: ${filePath}`);
-    return undefined;
-  }
 }
 
 async function getEntriesAsync(zipFile: Buffer): Promise<ZipEntry[] | undefined> {
@@ -89,9 +77,11 @@ function findEntryFile(normalizedEntries: NormalizedEntry[], normalizedPath: str
   return fileEntry;
 }
 
-export async function getZipFileEntryByPath(filePath: string, requestedPath: string = "index.html"): Promise<ZipEntry | Record<string, never>> {
-  const zipFile = await readZipFile(filePath);
+export async function getZipFileEntryByUrl(url: string, requestedPath: string = "index.html"): Promise<ZipEntry | Record<string, never>> {
+  console.log(`[React App] Fetching zip from URL: ${url}`);
+  const zipFile = await fetchZipFromBlob(url);
   if (zipFile === undefined) {
+    console.error(`[React App] Failed to fetch zip from URL: ${url}`);
     return {};
   }
 
@@ -110,22 +100,3 @@ export async function getZipFileEntryByPath(filePath: string, requestedPath: str
   }
   return fileEntry;
 }
-
-export async function storeZipFileOnDiskAsync(toolId: string, buffer: Buffer, bufferLength: number): Promise<string> {
-  const storageDir = path.join(process.cwd(), "storage", "react-apps");
-  await fs.mkdir(storageDir, { recursive: true });
-
-  const zipFileName = `${toolId}-${Date.now()}.zip`;
-  const zipFilePath = path.join(storageDir, zipFileName);
-
-  console.log(`[Upload] Saving zip file to: ${zipFilePath}`);
-  console.log(`[Upload] Buffer size: ${bufferLength} bytes`);
-
-  await fs.writeFile(zipFilePath, buffer);
-  return zipFilePath;
-}
-
-export async function deletZilpFileAsync(filePath: string): Promise<void> {
-  await fs.unlink(filePath);
-}
-

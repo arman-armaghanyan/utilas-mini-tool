@@ -11,9 +11,9 @@ function withIframeUrl(tool: any) {
   const plain =
     typeof tool.toObject === "function" ? tool.toObject({ virtuals: true }) : { ...tool };
 
-  // Remove file path from response (internal use only)
-  if (plain.reactAppZipPath) {
-    delete plain.reactAppZipPath;
+  // Remove internal blob URL from response (internal use only)
+  if (plain.reactAppBlobUrl) {
+    delete plain.reactAppBlobUrl;
   }
 
   const iframeUrl = plain.appType === 'react'

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import MiniToolDB from '@/lib/models/MiniToolDB';
-import { getZipFileEntryByBuffer, storeZipFileOnDiskAsync, deletZilpFileAsync } from '@/lib/services/reactZipProcessing';
+import { getZipFileEntryByBuffer } from '@/lib/services/reactZipProcessing';
+import { storeZipInBlob, deleteZipFromBlob } from '@/lib/services/blobStorage';
 
 // Helper function to get the base URL for full paths
 function getBaseUrl() {
@@ -23,9 +24,9 @@ function withIframeUrl(tool: any) {
   const plain =
     typeof tool.toObject === "function" ? tool.toObject({ virtuals: true }) : { ...tool };
 
-  // Remove file path from response (internal use only)
-  if (plain.reactAppZipPath) {
-    delete plain.reactAppZipPath;
+  // Remove internal blob URL from response (internal use only)
+  if (plain.reactAppBlobUrl) {
+    delete plain.reactAppBlobUrl;
   }
 
   const iframeUrl = plain.appType === 'react'
@@ -100,24 +101,21 @@ export async function POST(
       );
     }
 
-    console.log(`[Upload] index.html found, proceeding to save file`);
-    const zipFilePath = await storeZipFileOnDiskAsync(tool.id, buffer, buffer.length);
-    console.log(`[Upload] File saved successfully: ${zipFilePath}`);
-
-    // Delete old zip file if it exists
-    if (tool.reactAppZipPath) {
-      try {
-        await deletZilpFileAsync(tool.reactAppZipPath);
-      } catch (err) {
-        console.warn(`Could not delete old zip file: ${tool.reactAppZipPath}`);
-      }
+    console.log(`[Upload] index.html found, proceeding to upload to Vercel Blob`);
+    
+    // Delete old blob if it exists (do this before uploading new one)
+    if (tool.reactAppBlobUrl) {
+      await deleteZipFromBlob(tool.reactAppBlobUrl);
     }
+    
+    const blobUrl = await storeZipInBlob(tool.id, buffer);
+    console.log(`[Upload] File uploaded successfully to Vercel Blob: ${blobUrl}`);
 
     const baseUrl = getBaseUrl();
     const reactAppPath = `/mini-tools-react/${tool.iframeSlug}/`;
 
-    tool.reactAppZipPath = zipFilePath;
-    tool.reactAppUrl = `${baseUrl}${reactAppPath}`; // Store full URL
+    tool.reactAppBlobUrl = blobUrl; // Store Vercel Blob URL
+    tool.reactAppUrl = `${baseUrl}${reactAppPath}`; // Store full URL for iframe
     tool.appType = 'react';
     await tool.save();
     return NextResponse.json(withIframeUrl(tool));

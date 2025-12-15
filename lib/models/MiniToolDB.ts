@@ -52,7 +52,7 @@ const miniToolSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    reactAppZipPath: {
+    reactAppBlobUrl: {
       type: String,
       trim: true,
     },
