@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Access-Control-Allow-Origin",
-            value: "https://utilas.vercel.app",
+            value: "*",
           },
           {
             key: "Access-Control-Allow-Methods",
@@ -51,11 +51,11 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Access-Control-Allow-Origin",
-            value: "https://utilas.vercel.app",
+            value: "*",
           },
           {
             key: "Access-Control-Allow-Methods",
-            value: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+            value: "GET",
           },
           {
             key: "Access-Control-Allow-Headers",
