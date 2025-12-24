@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import MiniToolDB from '@/lib/models/MiniToolDB';
 import { withIframeUrl } from '@/lib/utils/toolHelpers';
+import { requireAuth } from '@/lib/auth';
 
 export async function GET() {
   try {
@@ -24,6 +25,15 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const { authorized } = await requireAuth();
+    if (!authorized) {
+      return NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
 
     const body = await request.json();

@@ -2,6 +2,8 @@
 
 import {getTools, MiniTool} from "@/lib/api";
 import {useEffect, useState} from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import ErrorHandelComponent from "@/Components/ErrorHandelComponent";
 import EmptyToolsComponent from "@/Components/EmptyToolsComponent";
 import MiniToolPreviewComponent from "@/Components/MiniToolPreviewComponent";
@@ -10,15 +12,37 @@ import {useToolSearch} from "@/hooks/useToolSearch";
 
 export const dynamic = "force-dynamic";
 
-export default  function HomePage() {
+export default function HomePage() {
+  const { status } = useSession();
+  const router = useRouter();
   const [tools, setTools] = useState<MiniTool[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { searchQuery, isSearching, handleSearch } = useToolSearch();
 
   useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (status === "authenticated") {
     refreshTools();
-  }, []);
+    }
+  }, [status]);
+
+  if (status === "loading") {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-6 py-12">
+        <div className="text-sm text-zinc-500">Loading...</div>
+      </main>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return null;
+  }
 
   async function refreshTools() {
     setLoading(true);

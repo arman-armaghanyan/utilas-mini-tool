@@ -4,6 +4,7 @@ import MiniToolDB from '@/lib/models/MiniToolDB';
 import { getZipFileEntryByBuffer } from '@/lib/services/reactZipProcessing';
 import { storeZipInBlob, deleteZipFromBlob } from '@/lib/services/blobStorage';
 import { getBaseUrl, withIframeUrl } from '@/lib/utils/toolHelpers';
+import { requireAuth } from '@/lib/auth';
 
 function isHasIndexHtmlExist(entries: any[]) {
   return entries.some(entry => {
@@ -20,6 +21,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Check authentication
+    const { authorized } = await requireAuth();
+    if (!authorized) {
+      return NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
 
     const { id } = await params;

@@ -2,6 +2,8 @@
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
   ApiError,
   MiniTool,
@@ -29,6 +31,8 @@ const defaultForm: MiniToolPayload = {
 };
 
 export default function AdminPage() {
+  const { status } = useSession();
+  const router = useRouter();
   const [tools, setTools] = useState<MiniTool[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,13 +45,33 @@ export default function AdminPage() {
   const { searchQuery, isSearching, handleSearch } = useToolSearch();
 
   useEffect(() => {
-    refreshTools();
-  }, []);
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      refreshTools();
+    }
+  }, [status]);
 
   const headerTitle = useMemo(
-    () => (editing ? "Update mini tool" : "Create a new mini tool"),
-    [editing]
+      () => (editing ? "Update mini tool" : "Create a new mini tool"),
+      [editing]
   );
+
+  if (status === "loading") {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-6 py-12">
+        <div className="text-sm text-zinc-500">Loading...</div>
+      </main>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return null;
+  }
 
   async function refreshTools() {
     setLoading(true);

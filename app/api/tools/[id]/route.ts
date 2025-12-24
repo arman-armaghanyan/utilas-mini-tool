@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb';
 import MiniToolDB from '@/lib/models/MiniToolDB';
 import { deleteZipFromBlob } from '@/lib/services/blobStorage';
 import { getBaseUrl, withIframeUrl } from '@/lib/utils/toolHelpers';
+import { requireAuth } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -46,6 +47,15 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Check authentication
+    const { authorized } = await requireAuth();
+    if (!authorized) {
+      return NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
 
     const { id } = await params;
@@ -128,6 +138,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Check authentication
+    const { authorized } = await requireAuth();
+    if (!authorized) {
+      return NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
 
     const { id } = await params;

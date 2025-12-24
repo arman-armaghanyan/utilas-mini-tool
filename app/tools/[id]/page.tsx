@@ -1,10 +1,9 @@
-
-
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ApiError, getTool } from "@/lib/api";
 import DescriptionPresentation from "@/Components/DescriptionPresentation";
+import { getServerSession } from "@/lib/auth";
 
 type ToolPageProps = {
   params: { id: string };
@@ -16,6 +15,10 @@ export default async function ToolDetailPage({
   params,
 }: ToolPageProps) {
 
+  const session = await getServerSession();
+  if (!session) {
+    redirect("/login");
+  }
 
   const { id } = await params;
 
