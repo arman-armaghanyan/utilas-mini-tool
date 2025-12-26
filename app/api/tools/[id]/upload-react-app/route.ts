@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import MiniToolDB from '@/lib/models/MiniToolDB';
 import { getZipFileEntryByBuffer } from '@/lib/services/reactZipProcessing';
-import { storeZipInBlob, deleteZipFromBlob } from '@/lib/services/blobStorage';
+import { storeFile, deleteFile } from '@/lib/services/fileStorage';
 import { getBaseUrl, withIframeUrl } from '@/lib/utils/toolHelpers';
 import { requireAuth } from '@/lib/auth';
 
@@ -80,10 +80,10 @@ export async function POST(
     
     // Delete old blob if it exists
     if (tool.reactAppBlobUrl) {
-      await deleteZipFromBlob(tool.reactAppBlobUrl);
+      await deleteFile(tool.reactAppBlobUrl);
     }
     
-    const blobUrl = await storeZipInBlob(tool.id, buffer);
+    const blobUrl = await storeFile(tool.id, buffer);
     console.log(`[Upload] File uploaded successfully to Vercel Blob: ${blobUrl}`);
 
     const baseUrl = getBaseUrl();

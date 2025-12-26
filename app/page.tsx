@@ -1,6 +1,6 @@
 "use client";
 
-import {getTools, MiniTool} from "@/lib/api";
+import {getTools, MiniToolPrev} from "@/lib/api";
 import {useEffect, useState} from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export default function HomePage() {
   const { status } = useSession();
   const router = useRouter();
-  const [tools, setTools] = useState<MiniTool[]>([]);
+  const [tools, setTools] = useState<MiniToolPrev[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { searchQuery, isSearching, handleSearch } = useToolSearch();

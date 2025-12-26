@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import MiniToolDB from '@/lib/models/MiniToolDB';
+import MiniToolPrev from '@/lib/models/MiniToolPrev';
 import { withIframeUrl } from '@/lib/utils/toolHelpers';
 import { requireAuth } from '@/lib/auth';
 
@@ -8,10 +9,9 @@ export async function GET() {
   try {
     await connectDB();
 
-    const tools = (await MiniToolDB.find()
+    const tools = await MiniToolPrev.find()
       .sort({ createdAt: -1 })
-      .lean())
-      .map(withIframeUrl);
+      .lean();
 
     return NextResponse.json(tools);
   } catch (error) {
@@ -94,6 +94,15 @@ export async function POST(request: NextRequest) {
     };
 
     const created = await MiniToolDB.create(createData);
+
+    // Create preview entry
+    await MiniToolPrev.create({
+      id: created.id, // using the same unique id
+      title: created.title,
+      summary: created.summary,
+      thumbnail: created.thumbnail,
+      toolId: created.id,
+    });
 
     return NextResponse.json(withIframeUrl(created), { status: 201 });
   } catch (error: any) {

@@ -1,3 +1,18 @@
+import {MiniToolPrevDto} from "@/lib/models/DTOs/MiniToolPrevDto";
+import {MiniToolRequestController} from "@/lib/Controlers/miniToolRequestController";
+import {MiniToolPreviewRequestController} from "@/lib/Controlers/miniToolPreviewRequestController";
+import {MiniToolDto} from "@/lib/models/DTOs/MiniToolDto";
+
+export type MiniToolPayloadDto = Omit<
+    MiniToolDto,
+    "_id" | "createdAt" | "updatedAt" | "iframeUrl" | "reactAppUrl"
+>;
+
+// Backwards-compatible public types (used across pages/components)
+export type MiniTool = MiniToolDto;
+export type MiniToolPrev = MiniToolPrevDto;
+
+export type MiniToolPrevPayload = MiniToolPrevDto;
 export class ApiError extends Error {
   status: number;
 
@@ -7,133 +22,55 @@ export class ApiError extends Error {
   }
 }
 
-export type DescriptionBlock = {
-  image: string;
-  text: string;
-  orientation: "left" | "right";
-};
+export const MiniToolPreviewController = new MiniToolPreviewRequestController();
+export const MiniToolController = new MiniToolRequestController();
 
-export type MiniTool = {
-  _id?: string;
-  id: string;
-  title: string;
-  summary: string;
-  description: DescriptionBlock[];
-  thumbnail: string;
-  iframeSlug: string;
-  iframeHtml?: string;
-  reactAppUrl?: string;
-  appType?: "html" | "react";
-  iframeUrl?: string;
-  iframeFullUrl?: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type MiniToolPayload = Omit<
-  MiniTool,
-  "_id" | "createdAt" | "updatedAt" | "iframeUrl" | "reactAppUrl"
->;
-
-function getApiBaseUrl(): string {
-  const baseUrl = 
-    process.env.API_BASE_URL ;
-  
-  return baseUrl ? baseUrl.replace(/\/$/, "") : "";
+// Backwards-compatible public functions (old code imports these from "@/lib/api")
+export function getTools(): Promise<MiniToolPrevDto[]> {
+  return MiniToolController.getTools();
 }
 
-async function request<T>(
-  path: string,
-  init: RequestInit = {}
-): Promise<T> {
-  const API_BASE_URL = getApiBaseUrl();
-  const url = API_BASE_URL ? `${API_BASE_URL}${path}` : path;
-
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init.headers || {}),
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const message = await extractError(response);
-    throw new ApiError(message, response.status);
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return response.json();
+export function searchTools(query: string): Promise<MiniToolPrevDto[]> {
+  return MiniToolController.searchTools(query);
 }
 
-async function extractError(response: Response): Promise<string> {
-  try {
-    const data = await response.json();
-    if (data?.message) {
-      return data.message;
-    }
-  } catch {
-    // ignore JSON parse errors
-  }
-  return response.statusText || "Request failed";
+export function getTool(id: string): Promise<MiniToolDto> {
+  return MiniToolController.getTool(id);
 }
 
-export function getTools(): Promise<MiniTool[]> {
-  return request<MiniTool[]>("/api/tools");
-}
-
-export function searchTools(query: string): Promise<MiniTool[]> {
-  return request<MiniTool[]>(`/api/tools/search-tools?q=${encodeURIComponent(query)}`);
-}
-
-export function getTool(id: string): Promise<MiniTool> {
-  return request<MiniTool>(`/api/tools/${id}`);
-}
-
-export function createTool(payload: MiniToolPayload): Promise<MiniTool> {
-  return request<MiniTool>("/api/tools", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+export function createTool(payload: MiniToolPayloadDto): Promise<MiniToolDto> {
+  return MiniToolController.createTool(payload);
 }
 
 export function updateTool(
   id: string,
-  payload: Partial<MiniToolPayload>
-): Promise<MiniTool> {
-  return request<MiniTool>(`/api/tools/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+  payload: Partial<MiniToolPayloadDto>
+): Promise<MiniToolDto> {
+  return MiniToolController.updateTool(id, payload);
 }
 
 export function deleteTool(id: string): Promise<void> {
-  return request<void>(`/api/tools/${id}`, { method: "DELETE" });
+  return MiniToolController.deleteTool(id);
 }
 
-export async function uploadReactApp(
+export function uploadReactApp(id: string, file: File): Promise<MiniToolDto> {
+  return MiniToolController.uploadReactApp(id, file);
+}
+
+export function createToolPreview(payload: MiniToolPrevPayload): Promise<MiniToolPrevDto> {
+  return MiniToolPreviewController.createToolPreview(payload);
+}
+
+export function updateToolPreview(
   id: string,
-  file: File
-): Promise<MiniTool> {
-  const formData = new FormData();
-  formData.append("reactApp", file);
-
-  const API_BASE_URL = getApiBaseUrl();
-  const url = API_BASE_URL ? `${API_BASE_URL}/api/tools/${id}/upload-react-app` : `/api/tools/${id}/upload-react-app`;
-
-  return fetch(url, {
-    method: "POST",
-    body: formData,
-    cache: "no-store",
-  }).then(async (response) => {
-    if (!response.ok) {
-      const message = await extractError(response);
-      throw new ApiError(message, response.status);
-    }
-    return response.json();
-  });
+  payload: Partial<MiniToolPrevPayload>
+): Promise<MiniToolPrevDto> {
+  return MiniToolPreviewController.updateToolPreview(id, payload);
 }
+
+export function deleteToolPreview(id: string): Promise<void> {
+  return MiniToolPreviewController.deleteToolPreview(id);
+}
+
+
+

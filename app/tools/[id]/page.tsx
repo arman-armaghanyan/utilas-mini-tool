@@ -1,9 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ApiError, getTool } from "@/lib/api";
+import { getTool } from "@/lib/api";
 import DescriptionPresentation from "@/Components/DescriptionPresentation";
 import { getServerSession } from "@/lib/auth";
+import {ApiError} from "@/lib/api";
 
 type ToolPageProps = {
   params: { id: string };

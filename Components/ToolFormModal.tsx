@@ -1,28 +1,29 @@
 "use client";
 
 import { ChangeEvent, useEffect } from "react";
-import { MiniTool, MiniToolPayload } from "@/lib/api";
+import { MiniTool } from "@/lib/api";
 import DescriptionBlocksEditor from "./DescriptionBlocksEditor";
+import {MiniToolPayloadDto} from "@/lib/api";
 
 type ToolFormModalProps = {
-  bindField: <K extends keyof MiniToolPayload>(
+  bindField: <K extends keyof MiniToolPayloadDto>(
       field: K
   ) => {
     onChange: (
         event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => void;
-    value: MiniToolPayload[K];
+    value: MiniToolPayloadDto[K];
   };
   editing: MiniTool | null;
   error: string | null;
-  formData: MiniToolPayload;
+  formData: MiniToolPayloadDto;
   headerTitle: string;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<void>;
   reactAppFile: File | null;
   saving: boolean;
-  setFormData: React.Dispatch<React.SetStateAction<MiniToolPayload>>;
+  setFormData: React.Dispatch<React.SetStateAction<MiniToolPayloadDto>>;
   setReactAppFile: React.Dispatch<React.SetStateAction<File | null>>;
   successMessage: string | null;
 };

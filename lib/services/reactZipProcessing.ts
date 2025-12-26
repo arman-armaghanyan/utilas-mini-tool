@@ -1,5 +1,5 @@
 import AdmZip from "adm-zip";
-import { fetchZipFromBlob } from "./blobStorage";
+import { fetchFile } from "./fileStorage";
 
 interface ZipEntry {
   entryName: string;
@@ -79,7 +79,7 @@ function findEntryFile(normalizedEntries: NormalizedEntry[], normalizedPath: str
 
 export async function getZipFileEntryByUrl(url: string, requestedPath: string = "index.html"): Promise<ZipEntry | Record<string, never>> {
   console.log(`[React App] Fetching zip from URL: ${url}`);
-  const zipFile = await fetchZipFromBlob(url);
+  const zipFile = await fetchFile(url);
   if (zipFile === undefined) {
     console.error(`[React App] Failed to fetch zip from URL: ${url}`);
     return {};

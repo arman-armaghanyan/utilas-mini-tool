@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { searchTools, getTools, MiniTool } from "@/lib/api";
+import { searchTools, MiniToolPrev } from "@/lib/api";
 
 export function useToolSearch() {
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -7,7 +7,7 @@ export function useToolSearch() {
 
   async function handleSearch(
     query: string,
-    setTools: (tools: MiniTool[]) => void,
+    setTools: (tools: MiniToolPrev[]) => void,
     refreshTools: () => Promise<void>
   ) {
     setSearchQuery(query);

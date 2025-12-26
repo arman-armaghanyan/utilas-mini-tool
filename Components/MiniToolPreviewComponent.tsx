@@ -1,10 +1,10 @@
 "use client";
-import {MiniTool} from "@/lib/api";
+import {MiniToolPrev} from "@/lib/api";
 import Image from "next/image";
 import Link from "next/link";
 
 type MiniToolPreviewComponentProps = {
-    tool: MiniTool;
+    tool: MiniToolPrev;
 };
 
 export default  function MiniToolPreviewComponent({tool}: MiniToolPreviewComponentProps) {
@@ -31,14 +31,11 @@ export default  function MiniToolPreviewComponent({tool}: MiniToolPreviewCompone
                 </div>
                 <div className="mt-auto flex items-center justify-between">
                     <Link
-                        href={`/tools/${tool.id}`}
+                        href={`/tools/${tool.toolId}`}
                         className="text-sm font-medium text-blue-600 hover:underline"
                     >
                         View details
                     </Link>
-                    <span className="text-xs uppercase tracking-wide text-zinc-400">
-                    #{tool.id}
-                  </span>
                 </div>
             </div>
         </article>

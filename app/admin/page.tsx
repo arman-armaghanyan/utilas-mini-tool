@@ -5,21 +5,27 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
-  ApiError,
   MiniTool,
-  MiniToolPayload,
+  MiniToolPrev,
+  MiniToolPrevPayload,
   createTool,
+  createToolPreview,
   deleteTool,
+  deleteToolPreview,
   getTools,
+  getTool,
   updateTool,
+  updateToolPreview,
   uploadReactApp,
 } from "@/lib/api";
 import ToolFormModal from "@/Components/ToolFormModal";
 import MiniToolListItem from "@/Components/MiniToolListItem";
 import SearchInput from "@/Components/SearchInput";
 import {useToolSearch} from "@/hooks/useToolSearch";
+import PreviewToolFormModal from "@/Components/PreviewToolFormModal";
+import {ApiError, MiniToolPayloadDto} from "@/lib/api";
 
-const defaultForm: MiniToolPayload = {
+const defaultForm: MiniToolPayloadDto = {
   id: "",
   title: "",
   summary: "",
@@ -30,19 +36,37 @@ const defaultForm: MiniToolPayload = {
   appType: "html",
 };
 
+const defaultPreviewForm: MiniToolPrevPayload = {
+  id: "",
+  title: "",
+  summary: "",
+  thumbnail: "",
+  toolId: "",
+};
+
 export default function AdminPage() {
   const { status } = useSession();
   const router = useRouter();
-  const [tools, setTools] = useState<MiniTool[]>([]);
+  const [tools, setTools] = useState<MiniToolPrev[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState<MiniToolPayload>(defaultForm);
+  const [formData, setFormData] = useState<MiniToolPayloadDto>(defaultForm);
   const [editing, setEditing] = useState<MiniTool | null>(null);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [reactAppFile, setReactAppFile] = useState<File | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { searchQuery, isSearching, handleSearch } = useToolSearch();
+
+  const [previewFormData, setPreviewFormData] =
+    useState<MiniToolPrevPayload>(defaultPreviewForm);
+  const [previewEditing, setPreviewEditing] = useState<MiniToolPrev | null>(null);
+  const [previewSaving, setPreviewSaving] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewSuccessMessage, setPreviewSuccessMessage] = useState<string | null>(
+    null
+  );
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -59,6 +83,11 @@ export default function AdminPage() {
   const headerTitle = useMemo(
       () => (editing ? "Update mini tool" : "Create a new mini tool"),
       [editing]
+  );
+
+  const previewHeaderTitle = useMemo(
+    () => (previewEditing ? "Update preview tool" : "Create a new preview tool"),
+    [previewEditing]
   );
 
   if (status === "loading") {
@@ -108,30 +137,53 @@ export default function AdminPage() {
     setSuccessMessage(null);
   }
 
+  function resetPreviewForm() {
+    setPreviewFormData(defaultPreviewForm);
+    setPreviewEditing(null);
+    setPreviewSaving(false);
+    setPreviewError(null);
+    setPreviewSuccessMessage(null);
+    setIsPreviewModalOpen(false);
+  }
+
   function openAddModal() {
     resetForm();
     setIsModalOpen(true);
   }
 
-  function onEdit(tool: MiniTool) {
-    setEditing(tool);
-    setFormData({
-      id: tool.id,
-      title: tool.title,
-      summary: tool.summary,
-      description: Array.isArray(tool.description) ? tool.description : [],
-      thumbnail: tool.thumbnail,
-      iframeSlug: tool.iframeSlug,
-      iframeHtml: tool.iframeHtml || "",
-      appType: tool.appType || "html",
-    });
-    setReactAppFile(null);
-    setIsModalOpen(true);
-    setError(null);
-    setSuccessMessage(null);
+  function openAddPreviewModal() {
+    resetPreviewForm();
+    setIsPreviewModalOpen(true);
   }
 
-  async function onDelete(tool: MiniTool) {
+  async function onEdit(toolPrev: MiniToolPrev) {
+    setSaving(true);
+    setError(null);
+    try {
+      const tool = await getTool(toolPrev.toolId);
+      setEditing(tool);
+      setFormData({
+        id: tool.id,
+        title: tool.title,
+        summary: tool.summary,
+        description: Array.isArray(tool.description) ? tool.description : [],
+        thumbnail: tool.thumbnail,
+        iframeSlug: tool.iframeSlug,
+        iframeHtml: tool.iframeHtml || "",
+        appType: tool.appType || "html",
+      });
+      setReactAppFile(null);
+      setIsModalOpen(true);
+      setSuccessMessage(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load tool details.";
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onDelete(tool: MiniToolPrev) {
     const confirmed = window.confirm(
       `Delete "${tool.title}"? This cannot be undone.`
     );
@@ -140,13 +192,48 @@ export default function AdminPage() {
     }
 
     try {
-      await deleteTool(tool.id);
+      await deleteTool(tool.toolId);
       setSuccessMessage(`Deleted ${tool.title}.`);
       await refreshTools();
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to delete tool.";
       setError(message);
+    }
+  }
+
+  function onEditPreview(toolPrev: MiniToolPrev) {
+    setPreviewError(null);
+    setPreviewSuccessMessage(null);
+    setPreviewEditing(toolPrev);
+    setPreviewFormData({
+      id: toolPrev.id,
+      title: toolPrev.title,
+      summary: toolPrev.summary,
+      thumbnail: toolPrev.thumbnail,
+      toolId: toolPrev.toolId,
+    });
+    setIsPreviewModalOpen(true);
+  }
+
+  async function onDeletePreview(toolPrev: MiniToolPrev) {
+    const confirmed = window.confirm(
+      `Delete preview "${toolPrev.title}" (preview id: ${toolPrev.id})? This will NOT delete the real tool.`
+    );
+    if (!confirmed) return;
+
+    setPreviewSaving(true);
+    setPreviewError(null);
+    try {
+      await deleteToolPreview(toolPrev.id);
+      setPreviewSuccessMessage(`Deleted preview ${toolPrev.title}.`);
+      await refreshTools();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete preview.";
+      setPreviewError(message);
+    } finally {
+      setPreviewSaving(false);
     }
   }
 
@@ -231,13 +318,58 @@ export default function AdminPage() {
     }
   }
 
-  function bindField<K extends keyof MiniToolPayload>(field: K) {
+  async function onSubmitPreview(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPreviewSaving(true);
+    setPreviewError(null);
+    setPreviewSuccessMessage(null);
+
+    if (previewEditing && previewFormData.id !== previewEditing.id) {
+      setPreviewError("Preview ID cannot be changed after creation.");
+      setPreviewSaving(false);
+      return;
+    }
+
+    try {
+      if (previewEditing) {
+        const { id, ...rest } = previewFormData;
+        const updated = await updateToolPreview(id, rest);
+        setPreviewSuccessMessage(`Updated preview ${updated.title}.`);
+      } else {
+        const created = await createToolPreview(previewFormData);
+        setPreviewSuccessMessage(`Created preview ${created.title}.`);
+      }
+
+      resetPreviewForm();
+      setIsPreviewModalOpen(false);
+      await refreshTools();
+    } catch (err) {
+      const message =
+        err instanceof ApiError ? err.message : "Unable to save preview.";
+      setPreviewError(message);
+    } finally {
+      setPreviewSaving(false);
+    }
+  }
+
+  function bindField<K extends keyof MiniToolPayloadDto>(field: K) {
     return {
       value: formData[field],
       onChange: (
         event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
       ) =>
         setFormData((prev) => ({
+          ...prev,
+          [field]: event.target.value,
+        })),
+    };
+  }
+
+  function bindPreviewField<K extends keyof MiniToolPrevPayload>(field: K) {
+    return {
+      value: previewFormData[field],
+      onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+        setPreviewFormData((prev) => ({
           ...prev,
           [field]: event.target.value,
         })),
@@ -262,6 +394,13 @@ export default function AdminPage() {
           >
             + Add Tool
           </button>
+          <button
+            type="button"
+            onClick={openAddPreviewModal}
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
+          >
+            + Add Preview Tool
+          </button>
           <Link
             href="/"
             className="text-sm font-medium text-blue-600 hover:underline"
@@ -285,6 +424,20 @@ export default function AdminPage() {
         bindField={bindField}
         setFormData={setFormData}
         setReactAppFile={setReactAppFile}
+      />
+
+      <PreviewToolFormModal
+        isOpen={isPreviewModalOpen}
+        formData={previewFormData}
+        editing={previewEditing}
+        error={previewError}
+        successMessage={previewSuccessMessage}
+        saving={previewSaving}
+        headerTitle={previewHeaderTitle}
+        onClose={resetPreviewForm}
+        onSubmit={onSubmitPreview}
+        bindField={bindPreviewField}
+        setFormData={setPreviewFormData}
       />
 
       <section className="flex flex-col gap-4">
@@ -319,9 +472,11 @@ export default function AdminPage() {
               <MiniToolListItem
                 key={tool.id}
                 tool={tool}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                saving={saving}
+                onEditTool={onEdit}
+                onDeleteTool={onDelete}
+                onEditPreview={onEditPreview}
+                onDeletePreview={onDeletePreview}
+                saving={saving || previewSaving}
                 editing={editing}
               />
             ))}

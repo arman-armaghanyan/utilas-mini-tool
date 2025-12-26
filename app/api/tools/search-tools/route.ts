@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
-import MiniToolDB from '@/lib/models/MiniToolDB';
-import { withIframeUrl } from '@/lib/utils/toolHelpers';
+import MiniToolPrev from '@/lib/models/MiniToolPrev';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,7 +19,7 @@ export async function GET(request: NextRequest) {
     const searchQuery = q.trim();
     const searchRegex = new RegExp(searchQuery, "i");
 
-    const tools = await MiniToolDB.find({
+    const tools = await MiniToolPrev.find({
       $or: [
         { title: searchRegex },
       ],
@@ -28,8 +27,7 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .lean();
 
-    const results = tools.map(withIframeUrl);
-    return NextResponse.json(results);
+    return NextResponse.json(tools);
   } catch (error) {
     console.error("Error searching tools:", error);
     return NextResponse.json(

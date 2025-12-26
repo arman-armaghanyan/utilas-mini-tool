@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import MiniToolDB from '@/lib/models/MiniToolDB';
-import { deleteZipFromBlob } from '@/lib/services/blobStorage';
+import MiniToolPrev from '@/lib/models/MiniToolPrev';
+import { deleteFile } from '@/lib/services/fileStorage';
 import { getBaseUrl, withIframeUrl } from '@/lib/utils/toolHelpers';
 import { requireAuth } from '@/lib/auth';
 
@@ -117,6 +118,20 @@ export async function PUT(
       { new: true, runValidators: true }
     );
 
+    // Update preview entry if title, summary, or thumbnail changed
+    if (updates.title || updates.summary || updates.thumbnail) {
+      await MiniToolPrev.findOneAndUpdate(
+        // Only sync the canonical preview (created alongside the tool)
+        // Custom previews must remain independent.
+        { id, toolId: id },
+        {
+          title: updated.title,
+          summary: updated.summary,
+          thumbnail: updated.thumbnail,
+        }
+      );
+    }
+
     return NextResponse.json(withIframeUrl(updated));
   } catch (error: any) {
     if (error.code === 11000) {
@@ -161,10 +176,12 @@ export async function DELETE(
 
     // Delete associated blob from Vercel Blob if it exists
     if (tool.reactAppBlobUrl) {
-      await deleteZipFromBlob(tool.reactAppBlobUrl);
+      await deleteFile(tool.reactAppBlobUrl);
     }
 
     await MiniToolDB.findOneAndDelete({ id });
+    // Remove ALL previews referencing this tool to avoid broken redirects.
+    await MiniToolPrev.deleteMany({ toolId: id });
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
